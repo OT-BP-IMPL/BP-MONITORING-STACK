@@ -20,11 +20,11 @@ services:
     restart: unless-stopped
     <<: *extra-hosts
     volumes:
-      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus/rules:/etc/prometheus/rules
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     <<: *extra-hosts
     volumes:
-      - ./alertmanager/alertmanager.yaml:/etc/alertmanager/alertmanager.yaml
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     ports:
       - "9093:9093"
     networks: [monitoring]
@@ -111,7 +111,7 @@ services:
     restart: unless-stopped
     <<: *extra-hosts
     volumes:
-      - ./blackbox/blackbox.yaml:/etc/blackbox_exporter/config.yaml
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
     ports:
       - "9115:9115"
     networks: [monitoring]

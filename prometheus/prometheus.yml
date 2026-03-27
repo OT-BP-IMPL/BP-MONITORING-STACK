@@ -2,8 +2,8 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: buildpiper-prod
-    env: production
+    cluster: buildpiper-impl
+    env: test
 
 alerting:
   alertmanagers:
@@ -11,9 +11,25 @@ alerting:
         - targets: ['alertmanager:9093']
 
 rule_files:
-  - /etc/prometheus/rules/*.yaml
+  - /etc/prometheus/rules/*.yml
 
 scrape_configs:
+
+  - job_name: 'blackbox-tcp-buildpiper'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - host.docker.internal:3306
+          - host.docker.internal:6379
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
 
   - job_name: 'prometheus'
     static_configs:
@@ -23,7 +39,11 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  - job_name: 'blackbox-http'
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'blackbox-http-buildpiper'
     metrics_path: /probe
     params:
       module: [http_2xx]
