@@ -1,0 +1,35 @@
+groups:
+  - name: endpoint_alerts
+    rules:
+
+      - alert: EndpointDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Endpoint DOWN: {{ $labels.instance }}"
+
+      - alert: EndpointSlowResponse
+        expr: probe_duration_seconds > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response (>2s) on {{ $labels.instance }}"
+
+      - alert: SSLCertExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL cert on {{ $labels.instance }} expires in less than 30 days"
+
+      - alert: SSLCertExpiryCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL cert on {{ $labels.instance }} expires in less than 7 days"

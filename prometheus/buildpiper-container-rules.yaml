@@ -1,0 +1,122 @@
+groups:
+
+  # ── Container up/down via cAdvisor ──────────────────────────────────────
+  - name: buildpiper_container_health
+    rules:
+
+      - alert: BuildPiperContainerDown
+        expr: |
+          time() - container_last_seen{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          } > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BuildPiper container DOWN: {{ $labels.name }}"
+          description: "Container {{ $labels.name }} has not been seen for over 60 seconds. It may have crashed or been stopped."
+
+      - alert: BuildPiperContainerRestarted
+        expr: |
+          increase(container_restart_count{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          }[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarted: {{ $labels.name }}"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} time(s) in the last 15 minutes."
+
+      - alert: BuildPiperContainerHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total{
+            name=~"bp_agent|publicapi|deployapi|scheduledapi|frontend"
+          }[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU in container: {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: BuildPiperContainerHighMemory
+        expr: |
+          (container_memory_usage_bytes{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          } / container_spec_memory_limit_bytes{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          }) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory in container: {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+
+  # ── HTTP health probe alerts ─────────────────────────────────────────────
+  - name: buildpiper_endpoint_health
+    rules:
+
+      - alert: BuildPiperServiceDown
+        expr: probe_success{job="blackbox-http-buildpiper"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BuildPiper service unreachable: {{ $labels.instance }}"
+          description: "HTTP probe to {{ $labels.instance }} is failing. Service may be down or not responding."
+
+      - alert: BuildPiperServiceSlowResponse
+        expr: probe_duration_seconds{job="blackbox-http-buildpiper"} > 3
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response from: {{ $labels.instance }} ({{ $value | printf \"%.2f\" }}s)"
+
+  # ── TCP connectivity alerts (MySQL + Redis) ──────────────────────────────
+  - name: buildpiper_tcp_health
+    rules:
+
+      - alert: MySQLTCPDown
+        expr: probe_success{job="blackbox-tcp-buildpiper", instance="host.docker.internal:3306"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL (db container) TCP port 3306 is unreachable"
+
+      - alert: RedisTCPDown
+        expr: probe_success{job="blackbox-tcp-buildpiper", instance="host.docker.internal:6379"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis container TCP port 6379 is unreachable"
+
+  # ── MySQL metric alerts ───────────────────────────────────────────────────
+  - name: buildpiper_mysql
+    rules:
+
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL exporter reports MySQL is DOWN"
+
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL connections above 80% of max ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: MySQLSlowQueries
+        expr: rate(mysql_global_status_slow_queries[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL slow queries rate above 5/min"
