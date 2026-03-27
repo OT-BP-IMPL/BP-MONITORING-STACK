@@ -85,7 +85,8 @@ services:
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
-    <<: *extra-hosts
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:
@@ -94,7 +95,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-      - /cgroup:/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro      # ← THIS was wrong before
+    command:
+      - '--housekeeping_interval=10s'
+      - '--docker_only=true'
+      - '--disable_metrics=hugetlb,percpu,sched,process,oom_event'
     ports:
       - "8080:8080"
     networks: [monitoring]
