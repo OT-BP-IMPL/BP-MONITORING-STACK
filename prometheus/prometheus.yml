@@ -50,9 +50,24 @@ scrape_configs:
     static_configs:
       - targets:
           - http://host.docker.internal:9125/health
+        labels:
+          name: "bp-agent"
+      - targets:
           - http://host.docker.internal:9124/health
+        labels:
+          name: "deploy-api"
+      - targets:
           - http://host.docker.internal:9123/health
+        labels:
+          name: "scheduled-api"
+      - targets:
           - http://host.docker.internal:80/health
+        labels:
+          name: "frontend"
+      - targets:
+          - http://host.docker.internal:9001/health
+        labels:
+          name: "public-api"
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
