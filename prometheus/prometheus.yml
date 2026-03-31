@@ -61,9 +61,9 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
-  - job_name: 'db-exporter'
+  - job_name: 'mysql'
     static_configs:
-      - targets: ['db-exporter:9187']
+      - targets: ['db-exporter:9104']
 
   - job_name: 'redis-exporter'
     static_configs:

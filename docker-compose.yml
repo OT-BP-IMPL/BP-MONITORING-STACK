@@ -128,7 +128,7 @@ services:
     volumes:
       - ./mysql-exporter.cnf:/etc/mysql/my.cnf:ro
     ports:
-      - "9187:9187"
+      - "9104:9104"
     networks: [monitoring]
   # ── redis-exporter now points to the BuildPiper Redis on host port 6379 ─
   redis-exporter:
