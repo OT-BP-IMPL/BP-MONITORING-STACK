@@ -122,13 +122,14 @@ services:
     container_name: db-exporter
     restart: unless-stopped
     <<: *extra-hosts
-    environment:
-      # REPLACE: use the MySQL monitor user you created (see Pre-flight tab)
-      - DATA_SOURCE_NAME: root:ot-buildpiper(host.docker.internal:3306)
+    command:
+      - "--config.my-cnf=/etc/mysql/my.cnf"
+      - "--mysqld.address=host.docker.internal:3306"
+    volumes:
+      - ./mysql-exporter.cnf:/etc/mysql/my.cnf:ro
     ports:
       - "9187:9187"
     networks: [monitoring]
-
   # ── redis-exporter now points to the BuildPiper Redis on host port 6379 ─
   redis-exporter:
     image: oliver006/redis_exporter:latest
