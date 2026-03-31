@@ -62,7 +62,7 @@ scrape_configs:
       - targets: ['http://host.docker.internal:80/health']
         labels:
           name: "frontend"
-      - targets: ['http://host.docker.internal:9001/health']
+      - targets: ['http://host.docker.internal:9001/api/v1/default/health']
         labels:
           name: "public-api"
     relabel_configs:
