@@ -49,10 +49,10 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://localhost:9125/health
-          - http://localhost:9124/health
-          - http://localhost:9123/health
-          - http://localhost:80/health
+          - http://host.docker.internal:9125/health
+          - http://host.docker.internal:9124/health
+          - http://host.docker.internal:9123/health
+          - http://host.docker.internal:80/health
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
