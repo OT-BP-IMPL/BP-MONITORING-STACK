@@ -124,7 +124,7 @@ services:
     <<: *extra-hosts
     environment:
       # REPLACE: use the MySQL monitor user you created (see Pre-flight tab)
-      DATA_SOURCE_NAME: "monitor:MonitorPass123@(host.docker.internal:3306)/"
+      - DATA_SOURCE_NAME: root:ot-buildpiper(host.docker.internal:3306)
     ports:
       - "9187:9187"
     networks: [monitoring]
