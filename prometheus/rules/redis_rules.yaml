@@ -14,7 +14,6 @@ groups:
 
       # Dashboard panel ID:40 — Redis Connected Clients
       # thresholds: red=0, orange=2, green=5
-      # NEW alert — was not in original rules
       - alert: RedisClientsDrop
         expr: redis_connected_clients < 5
         for: 2m
@@ -66,7 +65,10 @@ groups:
           description: "Dashboard panel: Reconnect Events / 5m — red at 20. Multiple worker nodes may be repeatedly disconnecting."
 
       - alert: RedisHighMemory
-        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        expr: |
+          redis_memory_max_bytes > 0
+          and
+          redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
         for: 5m
         labels:
           severity: warning

@@ -30,26 +30,33 @@ groups:
       - alert: BuildPiperContainerHighCPU
         expr: |
           rate(container_cpu_usage_seconds_total{
-            name=~"bp_agent|publicapi|deployapi|scheduledapi|frontend"
-          }[5m]) * 100 > 80
+            name=~"bp_agent|publicapi|deployapi|scheduledapi|frontend",
+            cpu="total"
+          }[5m]) * 100
+          /
+          count without(cpu, mode)(node_cpu_seconds_total{mode="idle"})
+          > 80
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "High CPU in container {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+          summary: "Container {{ $labels.name }} using >80% of total server CPU ({{ $value | printf \"%.1f\" }}%)"
+          description: "CPU usage is normalised across all host cores. 80% means the container is using 80% of total host CPU capacity, not just one core."
 
       - alert: BuildPiperContainerHighMemory
         expr: |
-          (container_memory_usage_bytes{
+          container_memory_usage_bytes{
             name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
-          } / container_spec_memory_limit_bytes{
-            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
-          }) * 100 > 85
+          }
+          /
+          node_memory_MemTotal_bytes
+          * 100 > 85
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "High memory in container {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+          summary: "Container {{ $labels.name }} using >85% of total host RAM ({{ $value | printf \"%.1f\" }}%)"
+          description: "No container memory limit is set. Usage is measured as % of total host RAM. Consider setting memory limits on containers."
 
   # ── HTTP endpoint health — dashboard panel ID:2 ──────────────────────────
   - name: buildpiper_endpoint_health
