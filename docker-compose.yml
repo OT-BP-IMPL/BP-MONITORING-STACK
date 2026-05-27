@@ -53,9 +53,17 @@ services:
     image: prom/alertmanager:latest
     container_name: alertmanager
     restart: unless-stopped
-    <<: *extra-hosts
+    env_file: .env
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager/alertmanager.yaml:/etc/alertmanager/alertmanager.yaml.tmpl:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /etc/alertmanager/alertmanager.yaml.tmpl /tmp/alertmanager.yaml
+        sed -i "s|SMTP_USERNAME_PLACEHOLDER|$$SMTP_USERNAME|g" /tmp/alertmanager.yaml
+        sed -i "s|SMTP_PASSWORD_PLACEHOLDER|$$SMTP_PASSWORD|g" /tmp/alertmanager.yaml
+        /bin/alertmanager --config.file=/tmp/alertmanager.yaml
     ports:
       - "9093:9093"
     networks: [monitoring]
@@ -121,12 +129,18 @@ services:
     image: prom/mysqld-exporter:latest
     container_name: db-exporter
     restart: unless-stopped
-    <<: *extra-hosts
-    command:
-      - "--config.my-cnf=/etc/mysql/my.cnf"
-      - "--mysqld.address=host.docker.internal:3306"
-    volumes:
-      - ./mysql-exporter.cnf:/etc/mysql/my.cnf:ro
+    env_file: .env
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        printf '[client]\nuser=%s\npassword=%s\n' \
+          "$$MYSQL_MONITOR_USER" "$$MYSQL_MONITOR_PASSWORD" \
+          > /tmp/my.cnf
+        /bin/mysqld_exporter --config.my-cnf=/tmp/my.cnf \
+          --mysqld.address=host.docker.internal:3306
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "9104:9104"
     networks: [monitoring]

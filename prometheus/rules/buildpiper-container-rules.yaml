@@ -1,0 +1,133 @@
+groups:
+
+  # ── Container up/down via cAdvisor ──────────────────────────────────────
+  - name: buildpiper_container_health
+    rules:
+
+      - alert: BuildPiperContainerDown
+        expr: |
+          time() - container_last_seen{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          } > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BuildPiper container DOWN: {{ $labels.name }}"
+          description: "Container {{ $labels.name }} not seen for >60s. Crashed or stopped."
+
+      - alert: BuildPiperContainerRestarted
+        expr: |
+          increase(container_restart_count{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          }[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarted: {{ $labels.name }} ({{ $value | printf \"%.0f\" }} restart(s) in 15m)"
+
+      - alert: BuildPiperContainerHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total{
+            name=~"bp_agent|publicapi|deployapi|scheduledapi|frontend"
+          }[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU in container {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: BuildPiperContainerHighMemory
+        expr: |
+          (container_memory_usage_bytes{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          } / container_spec_memory_limit_bytes{
+            name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
+          }) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory in container {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+
+  # ── HTTP endpoint health — dashboard panel ID:2 ──────────────────────────
+  - name: buildpiper_endpoint_health
+    rules:
+
+      - alert: BuildPiperServiceDown
+        expr: probe_success{job="blackbox-http-buildpiper"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BuildPiper service unreachable: {{ $labels.instance }}"
+          description: "HTTP probe failing. Dashboard: BP Endpoint Health shows RED."
+
+      - alert: BuildPiperServiceSlowResponse
+        expr: probe_duration_seconds{job="blackbox-http-buildpiper"} > 3
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response from {{ $labels.instance }} ({{ $value | printf \"%.2f\" }}s)"
+
+  # ── Celery / queue alerts — dashboard panels ID:5, ID:6, ID:61 ──────────
+  - name: buildpiper_celery
+    rules:
+
+      # Dashboard panel ID:5 — BP Celery Queue Depth
+      # thresholds: green=0, orange=10, red=50
+      - alert: CeleryQueueDepthWarning
+        expr: flower_tasks_by_state{state="RECEIVED"} > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue {{ $labels.queue }} has {{ $value | printf \"%.0f\" }} pending tasks (>10)"
+          description: "Dashboard panel: BP Celery Queue Depth — orange threshold at 10."
+
+      - alert: CeleryQueueDepthCritical
+        expr: flower_tasks_by_state{state="RECEIVED"} > 50
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Celery queue {{ $labels.queue }} CRITICAL — {{ $value | printf \"%.0f\" }} pending tasks (>50)"
+          description: "Dashboard panel: BP Celery Queue Depth — red threshold at 50."
+
+      # Dashboard panel ID:61 — All BP Queues Task State Trend
+      - alert: CeleryTaskFailureSpike
+        expr: sum(increase(flower_tasks_by_state{state="FAILURE"}[10m])) > 5
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Celery task failures spiking — {{ $value | printf \"%.0f\" }} failures in 10m"
+
+      - alert: CeleryHighRetryTasks
+        expr: sum(flower_tasks_by_state{state="RETRY"}) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value | printf \"%.0f\" }} Celery tasks stuck in RETRY state"
+
+      # Dashboard panel ID:6 — BP Worker Concurrency
+      # thresholds: green=0, red=80
+      - alert: CeleryNoWorkersOnline
+        expr: flower_workers_online == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No Celery workers online — all BuildPiper async tasks will fail"
+
+      - alert: CeleryWorkerConcurrencyHigh
+        expr: flower_worker_tasks_active > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery worker concurrency above 80 for worker {{ $labels.worker }}"
+          description: "Dashboard panel: BP Worker Concurrency — red threshold at 80."

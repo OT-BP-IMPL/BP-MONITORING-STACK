@@ -1,28 +1,55 @@
 groups:
   - name: db_alerts
     rules:
-      - alert: DatabaseDown
+
+      # Dashboard panel ID:10 — MySQL Status | thresholds: 0=red, 1=green
+      - alert: MySQLDown
         expr: mysql_up == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "MySQL is DOWN"
+          description: "mysql_up == 0. Dashboard panel: MySQL Status shows RED."
 
-      - alert: TooManyConnections
-        expr: >
-          mysql_global_status_threads_connected /
-          mysql_global_variables_max_connections * 100 > 80
+      # Dashboard panel ID:12 — Active DB Connections
+      # thresholds: green=0, orange=80 (absolute), red=120 (absolute)
+      # CHANGED FROM: percentage-based (80% of max_connections)
+      # TO: absolute thresholds matching dashboard exactly
+      - alert: MySQLConnectionsWarning
+        expr: mysql_global_status_threads_connected > 80
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "MySQL connections above 80% of max"
+          summary: "MySQL active connections above 80 (current: {{ $value | printf \"%.0f\" }})"
+          description: "Dashboard panel threshold: orange at 80 connections."
 
-      - alert: MySQLSlowQueries
-        expr: rate(mysql_global_status_slow_queries[5m]) > 5
-        for: 5m
+      - alert: MySQLConnectionsCritical
+        expr: mysql_global_status_threads_connected > 120
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL active connections above 120 — CRITICAL (current: {{ $value | printf \"%.0f\" }})"
+          description: "Dashboard panel threshold: red at 120 connections."
+
+      # Dashboard panel ID:16 — Active DB Connections Over Time
+      # expr: mysql_global_status_threads_running | threshold: red=80
+      - alert: MySQLHighRunningThreads
+        expr: mysql_global_status_threads_running > 80
+        for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "MySQL slow queries spike detected"
+          summary: "MySQL running threads above 80 (current: {{ $value | printf \"%.0f\" }})"
+          description: "Dashboard panel: Active DB Connections Over Time — red threshold at 80."
+
+      # TCP probe alert (from buildpiper-container-rules, kept here for DB scope)
+      - alert: MySQLTCPDown
+        expr: probe_success{job="blackbox-tcp-buildpiper", instance="host.docker.internal:3306"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL TCP port 3306 unreachable on host.docker.internal"

@@ -8,44 +8,67 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Node exporter down — host may be unreachable"
+          summary: "Node exporter down on {{ $labels.instance }} — host may be unreachable"
 
+      # Dashboard panel ID:26 — Node CPU Usage %
+      # expr: 100 - avg by(instance)(rate idle * 100) | threshold: red=80
+      # CHANGED: threshold from 85 → 80 to match dashboard
       - alert: HighCPU
-        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "CPU usage above 85% on {{ $labels.instance }}"
+          summary: "CPU usage above 80% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "Dashboard panel: Node CPU Usage % — red threshold at 80."
 
+      # Dashboard panel ID:27 — Node Memory Usage %
+      # expr: (1 - MemAvailable/MemTotal) * 100 | threshold: red=80
+      # CHANGED: threshold from 90 → 80 to match dashboard
       - alert: HighMemory
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Memory usage above 90% on {{ $labels.instance }}"
+          summary: "Memory usage above 80% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "Dashboard panel: Node Memory Usage % — red threshold at 80."
+
+      # Dashboard panel ID:28 — Disk Usage % (root)
+      # expr includes fstype!="tmpfs" | threshold: red=80
+      # CHANGED: added fstype filter, threshold from 85/15% → 80% usage
+      - alert: DiskSpaceWarning
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"})) * 100 > 75
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage above 75% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
 
       - alert: DiskSpaceCritical
-        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"})) * 100 > 80
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Disk space below 15% on {{ $labels.instance }}"
+          summary: "Disk usage above 80% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "Dashboard panel: Disk Usage % (root) — red threshold at 80."
 
-      - alert: DiskSpaceWarning
-        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 25
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Disk space below 25% on {{ $labels.instance }}"
-
+      # Dashboard panel ID:30 — Node Network I/O
+      # expr: device!~"lo|docker.*|veth.*" filter
+      # CHANGED: added device filter to match dashboard exactly
       - alert: NetworkErrors
-        expr: rate(node_network_transmit_errs_total[5m]) > 0
+        expr: rate(node_network_transmit_errs_total{device!~"lo|docker.*|veth.*"}[5m]) > 0
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "Network errors on {{ $labels.instance }} interface {{ $labels.device }}"
+          summary: "Network TX errors on {{ $labels.instance }} device {{ $labels.device }}"
+
+      - alert: NetworkReceiveErrors
+        expr: rate(node_network_receive_errs_total{device!~"lo|docker.*|veth.*"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network RX errors on {{ $labels.instance }} device {{ $labels.device }}"

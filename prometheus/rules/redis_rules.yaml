@@ -2,6 +2,7 @@ groups:
   - name: redis_alerts
     rules:
 
+      # Dashboard panel ID:18 — Redis Availability | thresholds: 0=red, 1=green
       - alert: RedisDown
         expr: redis_up == 0
         for: 1m
@@ -9,6 +10,60 @@ groups:
           severity: critical
         annotations:
           summary: "Redis is DOWN"
+          description: "redis_up == 0. Dashboard panel: Redis Availability shows RED."
+
+      # Dashboard panel ID:40 — Redis Connected Clients
+      # thresholds: red=0, orange=2, green=5
+      # NEW alert — was not in original rules
+      - alert: RedisClientsDrop
+        expr: redis_connected_clients < 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis connected clients below 5 (current: {{ $value | printf \"%.0f\" }})"
+          description: "Dashboard panel: Redis Connected Clients — orange threshold at 2, green at 5. A sudden drop indicates a worker node lost its broker connection."
+
+      - alert: RedisNoClients
+        expr: redis_connected_clients < 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis has fewer than 2 connected clients — possible mass disconnection"
+          description: "Dashboard panel: Redis Connected Clients — red threshold at 0. All worker agents may have lost Redis connection."
+
+      # Dashboard panel ID:32 — Redis Commands/s | thresholds: red=0, green=0.1
+      # NEW alert — was not in original rules
+      - alert: RedisNoCommands
+        expr: rate(redis_commands_processed_total[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis processing fewer than 0.1 commands/s — possibly idle or unreachable from workers"
+          description: "Dashboard panel: Redis Commands/s — green threshold is 0.1 req/s."
+
+      # Dashboard panel ID:41 — Reconnect Events / 5m
+      # thresholds: green=0, orange=5, red=20
+      # NEW alert — was not in original rules
+      - alert: RedisReconnectStormWarning
+        expr: increase(redis_total_connections_received_total[5m]) > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis reconnect storm detected — {{ $value | printf \"%.0f\" }} new connections in 5m"
+          description: "Dashboard panel: Reconnect Events / 5m — orange at 5. Matches 'Connection to broker lost. Trying to re-establish' in agent logs."
+
+      - alert: RedisReconnectStormCritical
+        expr: increase(redis_total_connections_received_total[5m]) > 20
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis reconnect storm CRITICAL — {{ $value | printf \"%.0f\" }} new connections in 5m"
+          description: "Dashboard panel: Reconnect Events / 5m — red at 20. Multiple worker nodes may be repeatedly disconnecting."
 
       - alert: RedisHighMemory
         expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
@@ -16,7 +71,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Redis memory above 85% of max"
+          summary: "Redis memory above 85% of max ({{ $value | printf \"%.1f\" }}%)"
 
       - alert: RedisEvictions
         expr: increase(redis_evicted_keys_total[5m]) > 0
@@ -25,3 +80,12 @@ groups:
           severity: warning
         annotations:
           summary: "Redis is evicting keys — possible data loss"
+
+      # TCP probe
+      - alert: RedisTCPDown
+        expr: probe_success{job="blackbox-tcp-buildpiper", instance="host.docker.internal:6379"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis TCP port 6379 unreachable on host.docker.internal"

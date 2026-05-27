@@ -2,24 +2,27 @@ groups:
   - name: endpoint_alerts
     rules:
 
+      # Dashboard panel ID:2 — BP Endpoint Health UP/DOWN Timeline
+      # expr: probe_success{job="blackbox-http-buildpiper"} | thresholds: 0=red, 1=green
       - alert: EndpointDown
-        expr: probe_success == 0
+        expr: probe_success{job="blackbox-http-buildpiper"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "Endpoint DOWN: {{ $labels.instance }}"
+          description: "HTTP probe to {{ $labels.instance }} returning 0. Dashboard panel: BP Endpoint Health shows RED."
 
       - alert: EndpointSlowResponse
-        expr: probe_duration_seconds > 2
+        expr: probe_duration_seconds{job="blackbox-http-buildpiper"} > 2
         for: 3m
         labels:
           severity: warning
         annotations:
-          summary: "Slow response (>2s) on {{ $labels.instance }}"
+          summary: "Slow response (>2s) on {{ $labels.instance }} ({{ $value | printf \"%.2f\" }}s)"
 
       - alert: SSLCertExpiringSoon
-        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http-buildpiper"} - time()) / 86400 < 30
         for: 1h
         labels:
           severity: warning
@@ -27,9 +30,9 @@ groups:
           summary: "SSL cert on {{ $labels.instance }} expires in less than 30 days"
 
       - alert: SSLCertExpiryCritical
-        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http-buildpiper"} - time()) / 86400 < 7
         for: 1h
         labels:
           severity: critical
         annotations:
-          summary: "SSL cert on {{ $labels.instance }} expires in less than 7 days"
+          summary: "SSL cert on {{ $labels.instance }} expires in less than 7 days — RENEW IMMEDIATELY"
