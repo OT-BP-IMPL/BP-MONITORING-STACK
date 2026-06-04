@@ -2,8 +2,8 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: buildpiper-impl
-    env: test
+    cluster: buildpiper-demo
+    env: sandbox
 
 alerting:
   alertmanagers:

@@ -59,7 +59,7 @@ groups:
       # CHANGED: added device filter to match dashboard exactly
       - alert: NetworkErrors
         expr: rate(node_network_transmit_errs_total{device!~"lo|docker.*|veth.*"}[5m]) > 0
-        for: 2m
+        for: 10m
         labels:
           severity: warning
         annotations:
@@ -67,7 +67,7 @@ groups:
 
       - alert: NetworkReceiveErrors
         expr: rate(node_network_receive_errs_total{device!~"lo|docker.*|veth.*"}[5m]) > 0
-        for: 2m
+        for: 10m
         labels:
           severity: warning
         annotations:

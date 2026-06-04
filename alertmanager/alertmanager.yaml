@@ -1,8 +1,8 @@
 global:
   smtp_smarthost: 'smtp.office365.com:587'
-  smtp_from: 'SMTP_USERNAME_PLACEHOLDER'
-  smtp_auth_username: 'SMTP_USERNAME_PLACEHOLDER'
-  smtp_auth_password: 'SMTP_PASSWORD_PLACEHOLDER'
+  smtp_from: 'support@opstree.com'
+  smtp_auth_username: 'support@opstree.com'
+  smtp_auth_password: 'October02@2024'
   smtp_require_tls: true
   resolve_timeout: 5m
 

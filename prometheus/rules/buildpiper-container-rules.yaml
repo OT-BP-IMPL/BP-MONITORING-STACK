@@ -8,8 +8,8 @@ groups:
         expr: |
           time() - container_last_seen{
             name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
-          } > 60
-        for: 1m
+          } > 120
+        for: 2m
         labels:
           severity: critical
         annotations:
@@ -21,7 +21,7 @@ groups:
           increase(container_restart_count{
             name=~"bp_agent|db|redis|publicapi|deployapi|scheduledapi|frontend"
           }[15m]) > 0
-        for: 0m
+        for: 2m
         labels:
           severity: warning
         annotations:
@@ -106,7 +106,7 @@ groups:
       # Dashboard panel ID:61 — All BP Queues Task State Trend
       - alert: CeleryTaskFailureSpike
         expr: sum(increase(flower_tasks_by_state{state="FAILURE"}[10m])) > 5
-        for: 0m
+        for: 2m
         labels:
           severity: critical
         annotations:
