@@ -17,33 +17,22 @@ groups:
       # CHANGED FROM: percentage-based (80% of max_connections)
       # TO: absolute thresholds matching dashboard exactly
       - alert: MySQLConnectionsWarning
-        expr: mysql_global_status_threads_connected > 80
+        expr: mysql_global_status_threads_connected > 300
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "MySQL active connections above 80 (current: {{ $value | printf \"%.0f\" }})"
+          summary: "MySQL active connections above 300 (current: {{ $value | printf \"%.0f\" }})"
           description: "Dashboard panel threshold: orange at 80 connections."
 
       - alert: MySQLConnectionsCritical
-        expr: mysql_global_status_threads_connected > 120
+        expr: mysql_global_status_threads_connected > 360
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "MySQL active connections above 120 — CRITICAL (current: {{ $value | printf \"%.0f\" }})"
+          summary: "MySQL active connections above 360 — CRITICAL (current: {{ $value | printf \"%.0f\" }})"
           description: "Dashboard panel threshold: red at 120 connections."
-
-      # Dashboard panel ID:16 — Active DB Connections Over Time
-      # expr: mysql_global_status_threads_running | threshold: red=80
-      - alert: MySQLHighRunningThreads
-        expr: mysql_global_status_threads_running > 80
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "MySQL running threads above 80 (current: {{ $value | printf \"%.0f\" }})"
-          description: "Dashboard panel: Active DB Connections Over Time — red threshold at 80."
 
       # TCP probe alert (from buildpiper-container-rules, kept here for DB scope)
       - alert: MySQLTCPDown

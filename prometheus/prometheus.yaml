@@ -17,6 +17,8 @@ scrape_configs:
   - job_name: 'celery-flower'
     static_configs:
       - targets: ['192.168.9.11:9002']
+        labels: 
+          instance: 'prod-hanuman-app-bpproduct-siddharthgupta-bp'
     metrics_path: /metrics
 
   - job_name: 'blackbox-tcp-buildpiper'
@@ -41,14 +43,20 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+        labels:
+          instance: 'prod-hanuman-app-bpproduct-siddharthgupta-bp'
 
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['host.docker.internal:9100']
+        labels:
+          instance: 'prod-hanuman-app-bpproduct-siddharthgupta-bp'
 
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
+        labels:
+          instance: 'prod-hanuman-app-bpproduct-siddharthgupta-bp'
 
   - job_name: 'blackbox-http-buildpiper'
     metrics_path: /probe
@@ -64,7 +72,7 @@ scrape_configs:
       - targets: ['http://host.docker.internal:9123/health']
         labels:
           name: "scheduled-api"
-      - targets: ['http://host.docker.internal:80/health']
+      - targets: ['http://host.docker.internal:9000/health']
         labels:
           name: "frontend"
       - targets: ['http://host.docker.internal:9001/api/v1/default/health']
